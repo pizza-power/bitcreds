@@ -1,6 +1,7 @@
 package bitbucket
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -36,7 +37,7 @@ func NewClient(baseURL, token string, rps float64) *Client {
 	}
 }
 
-func (c *Client) do(ctx context.Context, method, path string, params url.Values) ([]byte, error) {
+func (c *Client) doGet(ctx context.Context, path string, params url.Values) ([]byte, error) {
 	if err := c.limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limiter: %w", err)
 	}
@@ -46,13 +47,39 @@ func (c *Client) do(ctx context.Context, method, path string, params url.Values)
 		u += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", "application/json")
 
+	return c.execute(ctx, req, "GET", path, params, nil)
+}
+
+func (c *Client) doPost(ctx context.Context, path string, payload interface{}) ([]byte, error) {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limiter: %w", err)
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request body: %w", err)
+	}
+
+	u := c.baseURL + path
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	return c.execute(ctx, req, "POST", path, nil, payload)
+}
+
+func (c *Client) execute(ctx context.Context, req *http.Request, method, path string, params url.Values, payload interface{}) ([]byte, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http request: %w", err)
@@ -69,15 +96,18 @@ func (c *Client) do(ctx context.Context, method, path string, params url.Values)
 		}
 		select {
 		case <-time.After(wait):
-			return c.do(ctx, method, path, params)
+			if method == "POST" {
+				return c.doPost(ctx, path, payload)
+			}
+			return c.doGet(ctx, path, params)
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(body))
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	return io.ReadAll(resp.Body)
@@ -117,9 +147,28 @@ type HitLine struct {
 	Line int    `json:"line"`
 }
 
+// searchRequest is the JSON body for the Bitbucket code search API.
+type searchRequest struct {
+	Query    string         `json:"query"`
+	Entities searchEntities `json:"entities"`
+}
+
+type searchEntities struct {
+	Code searchPagination `json:"code"`
+}
+
+type searchPagination struct {
+	Start int `json:"start"`
+	Limit int `json:"limit"`
+}
+
 type searchResponse struct {
+	Code *searchCodeResponse `json:"code"`
+}
+
+type searchCodeResponse struct {
 	Values        []json.RawMessage `json:"values"`
-	Size          int               `json:"size"`
+	Count         int               `json:"count"`
 	IsLastPage    bool              `json:"isLastPage"`
 	NextPageStart int               `json:"nextPageStart"`
 }
@@ -136,13 +185,17 @@ func (c *Client) SearchCode(ctx context.Context, query string) ([]SearchResult, 
 	start := 0
 
 	for {
-		params := url.Values{}
-		params.Set("query", query)
-		params.Set("type", "code")
-		params.Set("limit", "25")
-		params.Set("start", strconv.Itoa(start))
+		reqBody := searchRequest{
+			Query: query,
+			Entities: searchEntities{
+				Code: searchPagination{
+					Start: start,
+					Limit: 25,
+				},
+			},
+		}
 
-		body, err := c.do(ctx, http.MethodGet, "/rest/search/1.0/search", params)
+		body, err := c.doPost(ctx, "/rest/search/latest/search", reqBody)
 		if err != nil {
 			return allResults, err
 		}
@@ -152,7 +205,11 @@ func (c *Client) SearchCode(ctx context.Context, query string) ([]SearchResult, 
 			return allResults, fmt.Errorf("decode search response: %w", err)
 		}
 
-		for _, raw := range resp.Values {
+		if resp.Code == nil || len(resp.Code.Values) == 0 {
+			break
+		}
+
+		for _, raw := range resp.Code.Values {
 			var result SearchResult
 			if err := json.Unmarshal(raw, &result); err != nil {
 				continue
@@ -160,10 +217,10 @@ func (c *Client) SearchCode(ctx context.Context, query string) ([]SearchResult, 
 			allResults = append(allResults, result)
 		}
 
-		if resp.IsLastPage || resp.Size == 0 {
+		if resp.Code.IsLastPage {
 			break
 		}
-		start = resp.NextPageStart
+		start = resp.Code.NextPageStart
 	}
 
 	return allResults, nil
@@ -179,7 +236,7 @@ func (c *Client) ListAllRepos(ctx context.Context) ([]Repository, error) {
 		params.Set("limit", "100")
 		params.Set("start", strconv.Itoa(start))
 
-		body, err := c.do(ctx, http.MethodGet, "/rest/api/1.0/repos", params)
+		body, err := c.doGet(ctx, "/rest/api/1.0/repos", params)
 		if err != nil {
 			return allRepos, err
 		}
