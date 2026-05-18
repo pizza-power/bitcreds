@@ -64,6 +64,9 @@ func main() {
 	if *timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, *timeout)
 		defer cancel()
+		log.Printf("Timeout set: %s", *timeout)
+	} else {
+		log.Println("No timeout set. Use --timeout to limit scan duration. Press Ctrl+C to stop.")
 	}
 
 	sigCh := make(chan os.Signal, 1)

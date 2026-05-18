@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -183,8 +184,13 @@ type repoResponse struct {
 func (c *Client) SearchCode(ctx context.Context, query string) ([]SearchResult, error) {
 	var allResults []SearchResult
 	start := 0
+	maxPages := 100
 
-	for {
+	for page := 0; page < maxPages; page++ {
+		if ctx.Err() != nil {
+			return allResults, ctx.Err()
+		}
+
 		reqBody := searchRequest{
 			Query: query,
 			Entities: searchEntities{
@@ -198,6 +204,10 @@ func (c *Client) SearchCode(ctx context.Context, query string) ([]SearchResult, 
 		body, err := c.doPost(ctx, "/rest/search/latest/search", reqBody)
 		if err != nil {
 			return allResults, err
+		}
+
+		if page == 0 {
+			log.Printf("[search] Raw first page response for %q: %s", query, truncateLog(body, 500))
 		}
 
 		var resp searchResponse
@@ -217,13 +227,28 @@ func (c *Client) SearchCode(ctx context.Context, query string) ([]SearchResult, 
 			allResults = append(allResults, result)
 		}
 
+		log.Printf("[search] Query %q: page %d, got %d results (total so far: %d)", query, page+1, len(resp.Code.Values), len(allResults))
+
 		if resp.Code.IsLastPage {
 			break
 		}
-		start = resp.Code.NextPageStart
+
+		nextStart := resp.Code.NextPageStart
+		if nextStart <= start {
+			log.Printf("[search] Query %q: nextPageStart (%d) not advancing past current (%d), stopping", query, nextStart, start)
+			break
+		}
+		start = nextStart
 	}
 
 	return allResults, nil
+}
+
+func truncateLog(b []byte, n int) string {
+	if len(b) <= n {
+		return string(b)
+	}
+	return string(b[:n]) + "...(truncated)"
 }
 
 // ListAllRepos returns all repositories accessible by the token.
