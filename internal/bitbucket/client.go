@@ -2,6 +2,7 @@ package bitbucket
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,11 +22,15 @@ type Client struct {
 }
 
 func NewClient(baseURL, token string, rps float64) *Client {
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	return &Client{
 		baseURL: baseURL,
 		token:   token,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 		limiter: rate.NewLimiter(rate.Limit(rps), int(rps)+1),
 	}

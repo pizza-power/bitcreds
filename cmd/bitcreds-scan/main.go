@@ -15,12 +15,15 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/user/bitcreds/internal/bitbucket"
+	"github.com/user/bitcreds/internal/config"
 	"github.com/user/bitcreds/internal/db"
 	"github.com/user/bitcreds/internal/patterns"
 	"github.com/user/bitcreds/internal/scanner"
 )
 
 func main() {
+	config.LoadEnv(".env")
+
 	baseURL := flag.String("base-url", envOrDefault("BITBUCKET_URL", ""), "Bitbucket Server base URL")
 	token := flag.String("token", envOrDefault("BITBUCKET_TOKEN", ""), "Bitbucket personal access token")
 	dbPath := flag.String("db", "bitcreds.db", "Path to SQLite database file")

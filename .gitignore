@@ -13,6 +13,9 @@ bitcreds-server
 *.db-shm
 *.db-wal
 
+# Environment
+.env
+
 # Test artifacts
 *.test
 *.out

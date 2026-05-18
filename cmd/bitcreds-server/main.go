@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/user/bitcreds/internal/config"
 	"github.com/user/bitcreds/internal/db"
 	"github.com/user/bitcreds/internal/patterns"
 	"github.com/user/bitcreds/internal/web/handlers"
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	config.LoadEnv(".env")
+
 	dbPath := flag.String("db", "bitcreds.db", "Path to SQLite database file")
 	listen := flag.String("listen", ":8080", "Listen address")
 	username := flag.String("username", envOrDefault("BITCREDS_USERNAME", "admin"), "Basic auth username")
