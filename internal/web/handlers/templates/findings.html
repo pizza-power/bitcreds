@@ -1,0 +1,108 @@
+{{define "findings.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bitcreds - Findings</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">bitcreds</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/findings">Findings</a>
+            <a href="/scans">Scans</a>
+            <a href="/patterns">Patterns</a>
+        </div>
+    </nav>
+    <main class="container">
+        <h1>Findings <span class="count">({{.Total}})</span></h1>
+
+        <form class="filter-bar" method="get" action="/findings">
+            <select name="status">
+                <option value="">All Statuses</option>
+                <option value="open" {{if eq .Filter.Status "open"}}selected{{end}}>Open</option>
+                <option value="resolved" {{if eq .Filter.Status "resolved"}}selected{{end}}>Resolved</option>
+                <option value="false_positive" {{if eq .Filter.Status "false_positive"}}selected{{end}}>False Positive</option>
+            </select>
+            <select name="project">
+                <option value="">All Projects</option>
+                {{range .Projects}}
+                <option value="{{.}}" {{if eq . $.Filter.ProjectKey}}selected{{end}}>{{.}}</option>
+                {{end}}
+            </select>
+            <select name="pattern">
+                <option value="">All Patterns</option>
+                {{range .PatternNames}}
+                <option value="{{.}}" {{if eq . $.Filter.PatternName}}selected{{end}}>{{.}}</option>
+                {{end}}
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="/findings" class="btn btn-secondary">Reset</a>
+        </form>
+
+        <form method="post" action="/findings/bulk-action" id="bulkForm">
+            <div class="bulk-actions">
+                <select name="action">
+                    <option value="">Bulk Action...</option>
+                    <option value="resolve">Mark Resolved</option>
+                    <option value="false_positive">Mark False Positive</option>
+                    <option value="reopen">Reopen</option>
+                    <option value="delete">Delete</option>
+                </select>
+                <button type="submit" class="btn btn-secondary" onclick="return confirm('Apply bulk action to selected findings?')">Apply</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
+                        <th>Project</th>
+                        <th>Repo</th>
+                        <th>File</th>
+                        <th>Pattern</th>
+                        <th>Match</th>
+                        <th>Status</th>
+                        <th>Found</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Findings}}
+                    <tr>
+                        <td><input type="checkbox" name="ids" value="{{.ID}}"></td>
+                        <td>{{.ProjectKey}}</td>
+                        <td>{{.RepoSlug}}</td>
+                        <td><a href="/findings/{{.ID}}">{{truncate .FilePath 40}}</a></td>
+                        <td>{{.PatternName}}</td>
+                        <td><code>{{truncate .MatchText 30}}</code></td>
+                        <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
+                        <td>{{.FoundAt.Format "2006-01-02"}}</td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="8" class="empty">No findings match the current filter.</td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </form>
+
+        {{if gt .TotalPages 1}}
+        <div class="pagination">
+            {{if gt .Page 1}}
+            <a href="/findings?page={{sub .Page 1}}&status={{.Filter.Status}}&project={{.Filter.ProjectKey}}&pattern={{.Filter.PatternName}}" class="btn btn-secondary">&laquo; Prev</a>
+            {{end}}
+            <span>Page {{.Page}} of {{.TotalPages}}</span>
+            {{if lt .Page .TotalPages}}
+            <a href="/findings?page={{add .Page 1}}&status={{.Filter.Status}}&project={{.Filter.ProjectKey}}&pattern={{.Filter.PatternName}}" class="btn btn-secondary">Next &raquo;</a>
+            {{end}}
+        </div>
+        {{end}}
+
+        <script>
+        document.getElementById('selectAll').addEventListener('change', function() {
+            document.querySelectorAll('input[name="ids"]').forEach(cb => cb.checked = this.checked);
+        });
+        </script>
+    </main>
+</body>
+</html>{{end}}

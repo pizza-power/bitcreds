@@ -1,0 +1,105 @@
+{{define "finding_detail.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bitcreds - Finding #{{.Finding.ID}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">bitcreds</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/findings">Findings</a>
+            <a href="/scans">Scans</a>
+            <a href="/patterns">Patterns</a>
+        </div>
+    </nav>
+    <main class="container">
+        <div class="breadcrumb">
+            <a href="/findings">&larr; Back to Findings</a>
+        </div>
+
+        <h1>Finding #{{.Finding.ID}}</h1>
+
+        <div class="detail-grid">
+            <div class="detail-card">
+                <h3>Location</h3>
+                <dl>
+                    <dt>Project</dt><dd>{{.Finding.ProjectKey}}</dd>
+                    <dt>Repository</dt><dd>{{.Finding.RepoSlug}}</dd>
+                    <dt>File</dt><dd><code>{{.Finding.FilePath}}</code></dd>
+                    <dt>Line</dt><dd>{{.Finding.LineNumber}}</dd>
+                    {{if .Finding.CommitHash}}
+                    <dt>Commit</dt><dd><code>{{truncate .Finding.CommitHash 8}}</code></dd>
+                    {{end}}
+                    {{if .Finding.Author}}
+                    <dt>Author</dt><dd>{{.Finding.Author}}</dd>
+                    {{end}}
+                </dl>
+            </div>
+
+            <div class="detail-card">
+                <h3>Detection</h3>
+                <dl>
+                    <dt>Pattern</dt><dd>{{.Finding.PatternName}}</dd>
+                    <dt>Type</dt><dd>{{.Finding.PatternType}}</dd>
+                    <dt>Status</dt><dd><span class="badge {{statusClass .Finding.Status}}">{{.Finding.Status}}</span></dd>
+                    <dt>Found</dt><dd>{{.Finding.FoundAt.Format "2006-01-02 15:04:05"}}</dd>
+                    <dt>Updated</dt><dd>{{.Finding.UpdatedAt.Format "2006-01-02 15:04:05"}}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <h3>Match</h3>
+            <pre class="match-text">{{.Finding.MatchText}}</pre>
+        </div>
+
+        <div class="actions-bar">
+            <h3>Actions</h3>
+            <form method="post" action="/findings/update-status" class="inline-form">
+                <input type="hidden" name="id" value="{{.Finding.ID}}">
+                <input type="hidden" name="redirect" value="/findings/{{.Finding.ID}}">
+                {{if ne .Finding.Status "resolved"}}
+                <button type="submit" name="status" value="resolved" class="btn btn-success">Mark Resolved</button>
+                {{end}}
+                {{if ne .Finding.Status "false_positive"}}
+                <button type="submit" name="status" value="false_positive" class="btn btn-warning">False Positive</button>
+                {{end}}
+                {{if ne .Finding.Status "open"}}
+                <button type="submit" name="status" value="open" class="btn btn-secondary">Reopen</button>
+                {{end}}
+            </form>
+            <form method="post" action="/findings/delete" class="inline-form" onsubmit="return confirm('Permanently delete this finding?')">
+                <input type="hidden" name="id" value="{{.Finding.ID}}">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+
+        <div class="notes-section">
+            <h3>Notes</h3>
+            <form method="post" action="/notes/add" class="note-form">
+                <input type="hidden" name="finding_id" value="{{.Finding.ID}}">
+                <textarea name="content" rows="3" placeholder="Add a note..."></textarea>
+                <button type="submit" class="btn btn-primary">Add Note</button>
+            </form>
+
+            {{range .Notes}}
+            <div class="note">
+                <div class="note-meta">{{.CreatedAt.Format "2006-01-02 15:04"}}</div>
+                <div class="note-content">{{.Content}}</div>
+                <form method="post" action="/notes/delete" class="inline-form">
+                    <input type="hidden" name="id" value="{{.ID}}">
+                    <input type="hidden" name="finding_id" value="{{.FindingID}}">
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+            </div>
+            {{else}}
+            <p class="empty">No notes yet.</p>
+            {{end}}
+        </div>
+    </main>
+</body>
+</html>{{end}}

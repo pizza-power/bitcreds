@@ -1,0 +1,52 @@
+{{define "scans.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bitcreds - Scan History</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">bitcreds</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/findings">Findings</a>
+            <a href="/scans">Scans</a>
+            <a href="/patterns">Patterns</a>
+        </div>
+    </nav>
+    <main class="container">
+        <h1>Scan History</h1>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Scan ID</th>
+                    <th>Status</th>
+                    <th>Findings</th>
+                    <th>Repos Scanned</th>
+                    <th>Duration</th>
+                    <th>Started</th>
+                    <th>Finished</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Scans}}
+                <tr>
+                    <td><code>{{truncate .ID 8}}</code></td>
+                    <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
+                    <td>{{.FindingsCount}}</td>
+                    <td>{{.ReposScanned}}</td>
+                    <td>{{.DurationSeconds}}s</td>
+                    <td>{{.StartedAt.Format "2006-01-02 15:04:05"}}</td>
+                    <td>{{if .FinishedAt}}{{.FinishedAt.Format "2006-01-02 15:04:05"}}{{else}}-{{end}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="7" class="empty">No scans recorded yet. Run bitcreds-scan to get started.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>{{end}}

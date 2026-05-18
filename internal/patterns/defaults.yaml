@@ -1,0 +1,84 @@
+patterns:
+  - name: aws_access_key
+    type: cloud_credential
+    severity: critical
+    regex: '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'
+    description: AWS Access Key ID
+
+  - name: aws_secret_key
+    type: cloud_credential
+    severity: critical
+    regex: '(?i)aws_secret_access_key\s*[:=]\s*["\x27]?([A-Za-z0-9/+=]{40})["\x27]?'
+    description: AWS Secret Access Key
+
+  - name: private_key
+    type: crypto_key
+    severity: critical
+    regex: '-----BEGIN (?:RSA|EC|DSA|OPENSSH) PRIVATE KEY-----'
+    description: Private key file
+
+  - name: github_token
+    type: api_token
+    severity: critical
+    regex: 'gh[pousr]_[A-Za-z0-9_]{36,255}'
+    description: GitHub personal access token
+
+  - name: generic_api_key
+    type: api_token
+    severity: high
+    regex: '(?i)(?:api[_-]?key|apikey)\s*[:=]\s*["\x27]([A-Za-z0-9_\-]{20,})["\x27]'
+    description: Generic API key assignment
+
+  - name: generic_secret
+    type: secret
+    severity: high
+    regex: '(?i)(?:secret|secret[_-]?key)\s*[:=]\s*["\x27]([A-Za-z0-9_\-]{20,})["\x27]'
+    description: Generic secret assignment
+
+  - name: generic_password
+    type: password
+    severity: high
+    regex: '(?i)(?:password|passwd|pwd)\s*[:=]\s*["\x27]([^\s"\x27]{8,})["\x27]'
+    description: Hardcoded password assignment
+
+  - name: slack_token
+    type: api_token
+    severity: critical
+    regex: 'xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24,34}'
+    description: Slack API token
+
+  - name: slack_webhook
+    type: api_token
+    severity: high
+    regex: 'https://hooks\.slack\.com/services/T[A-Z0-9]{8,}/B[A-Z0-9]{8,}/[a-zA-Z0-9]{24}'
+    description: Slack webhook URL
+
+  - name: gcp_service_account
+    type: cloud_credential
+    severity: critical
+    regex: '"type"\s*:\s*"service_account"'
+    description: GCP service account JSON key
+
+  - name: azure_connection_string
+    type: cloud_credential
+    severity: critical
+    regex: '(?i)DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[A-Za-z0-9+/=]{88};'
+    description: Azure Storage connection string
+
+  - name: jwt_token
+    type: token
+    severity: medium
+    regex: 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'
+    description: JSON Web Token
+
+  - name: database_url
+    type: connection_string
+    severity: critical
+    regex: '(?i)(?:postgres|mysql|mongodb|redis)://[^\s"''<>]{10,}'
+    description: Database connection URL with credentials
+
+  - name: bearer_token
+    type: token
+    severity: high
+    regex: '(?i)(?:authorization|bearer)\s*[:=]\s*["\x27]?Bearer\s+[A-Za-z0-9_\-.]{20,}["\x27]?'
+    description: Bearer token in header or variable

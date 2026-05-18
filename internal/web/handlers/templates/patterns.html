@@ -1,0 +1,48 @@
+{{define "patterns.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bitcreds - Patterns</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">bitcreds</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/findings">Findings</a>
+            <a href="/scans">Scans</a>
+            <a href="/patterns">Patterns</a>
+        </div>
+    </nav>
+    <main class="container">
+        <h1>Active Patterns</h1>
+
+        <p>These patterns are used by the scanner to detect leaked credentials.</p>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Regex</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Patterns}}
+                <tr>
+                    <td><strong>{{.Name}}</strong></td>
+                    <td>{{.Type}}</td>
+                    <td><span class="badge {{severityClass .Severity}}">{{.Severity}}</span></td>
+                    <td>{{.Description}}</td>
+                    <td><code>{{truncate .Regex 50}}</code></td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>{{end}}
